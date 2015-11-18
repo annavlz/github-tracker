@@ -23,13 +23,15 @@ view string data =
         , class "input"
         ]
         [ ]
-    , img [src data.source
+    , img [src data.avatar
           , class "avatar"]
         [ ]
     , p [ ]
         [ text ("Name: " ++ data.name) ]
     , p [ ]
         [ text ("Public repos: " ++ (toString data.repos))]
+    , p [ ]
+        [ text ("Created at: " ++ data.createdAt) ]
     ]
 
 
@@ -45,11 +47,12 @@ results =
   Signal.mailbox initialData
 
 
-port requestImg : Signal (Task Http.Error ())
-port requestImg =
+port requestData : Signal (Task Http.Error ())
+port requestData =
   query.signal
     |> sample getImage
-    |> Signal.map (\task -> task `andThen` Signal.send results.address)
+    |> Signal.map (\task -> task
+                   `andThen` Signal.send results.address)
 
 
 sample get input =
@@ -72,25 +75,28 @@ getImage username =
 
 
 type alias Data =
-    { source : String,
+    { avatar  : String,
       repos : Int,
-      name : String
+      name : String,
+      createdAt : String
     }
 
 
 data : Json.Decoder Data
 data =
-     Json.object3 Data
+     Json.object4 Data
      ("avatar_url" := Json.string)
      ("public_repos" := Json.int)
      ("name" := Json.string)
+     ("created_at" := Json.string)
 
 
 initialData : Data
 initialData =
-  { source = "",
+  { avatar  = "",
     repos = 0,
-    name = ""
+    name = "",
+    createdAt = ""
   }
 -- HANDLE RESPONSES
 
