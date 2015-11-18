@@ -7,21 +7,24 @@ import Http
 import Json.Decode as Json exposing ((:=))
 import String
 import Task exposing (..)
-import Window
+
 
 
 -- VIEW
 
-view : Int -> String -> String -> Html
-view h string imgUrl =
-  div [ style (imgStyle h imgUrl) ]
+view : String -> String -> Html
+view string imgUrl =
+  div [ ]
     [ input
         [ placeholder "GitHub username"
         , Attr.value string
         , on "input" targetValue (Signal.message query.address)
-        , style myStyle
+        , class "input"
         ]
         []
+    , img [src imgUrl
+          , class "avatar"]
+      [  ]
     ]
 
 
@@ -35,22 +38,11 @@ myStyle =
     ]
 
 
-imgStyle : Int -> String -> List (String, String)
-imgStyle h src =
-    [ ("background-image", "url('" ++ src ++ "')")
-    , ("background-repeat", "no-repeat")
-    , ("background-attachment", "fixed")
-    , ("background-position", "center")
-    , ("width", "100%")
-    , ("height", toString h ++ "px")
-    ]
-
-
 -- WIRING
 
 main : Signal Html
 main =
-  Signal.map3 view Window.height query.signal results.signal
+  Signal.map2 view query.signal results.signal
 
 
 results : Signal.Mailbox String
@@ -61,12 +53,12 @@ results =
 port requestImg : Signal (Task Http.Error ())
 port requestImg =
   query.signal
-    |> sample getImage Window.dimensions
+    |> sample getImage
     |> Signal.map (\task -> task `andThen` Signal.send results.address)
 
 
-sample f sampled events =
-  Signal.sampleOn events (Signal.map2 f sampled events)
+sample f events =
+  Signal.sampleOn events (Signal.map f events)
 
 
 query : Signal.Mailbox String
@@ -74,11 +66,11 @@ query =
   Signal.mailbox ""
 
 
-getImage : (Int,Int) -> String -> Task Http.Error String
-getImage dimensions username =
+getImage : String -> Task Http.Error String
+getImage username =
         Http.get avatar ("https://api.github.com/users/" ++ username)
         `andThen`
-            showPhoto dimensions
+            showPhoto
 
 
 -- JSON DECODERS
@@ -98,6 +90,6 @@ avatar =
 -- HANDLE RESPONSES
 
 
-showPhoto : (Int,Int) -> Avatar -> Task Http.Error String
-showPhoto (width,height) photo =
+showPhoto : Avatar -> Task Http.Error String
+showPhoto photo =
   succeed photo.source
