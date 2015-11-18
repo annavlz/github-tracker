@@ -7,6 +7,7 @@ import Http
 import Json.Decode as Json exposing ((:=))
 import String
 import Task exposing (..)
+import Keyboard
 
 
 
@@ -51,8 +52,8 @@ port requestImg =
     |> Signal.map (\task -> task `andThen` Signal.send results.address)
 
 
-sample f events =
-  Signal.sampleOn events (Signal.map f events)
+sample get input =
+  Signal.sampleOn Keyboard.enter (Signal.map get input)
 
 
 query : Signal.Mailbox String
