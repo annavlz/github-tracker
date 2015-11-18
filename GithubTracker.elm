@@ -12,8 +12,8 @@ import Task exposing (..)
 
 -- VIEW
 
-view : String -> String -> Html
-view string imgUrl =
+view : String -> Data -> Html
+view string data =
   div [ ]
     [ input
         [ placeholder "GitHub username"
@@ -21,20 +21,14 @@ view string imgUrl =
         , on "input" targetValue (Signal.message query.address)
         , class "input"
         ]
-        []
-    , img [src imgUrl
+        [ ]
+    , img [src data.source
           , class "avatar"]
-      [  ]
-    ]
-
-
-myStyle : List (String, String)
-myStyle =
-    [ ("width", "100%")
-    , ("height", "40px")
-    , ("padding", "10px 0")
-    , ("font-size", "2em")
-    , ("text-align", "center")
+        [ ]
+    , p [ ]
+        [ text ("Name: " ++ data.name) ]
+    , p [ ]
+        [ text ("Public repos: " ++ (toString data.repos))]
     ]
 
 
@@ -45,9 +39,9 @@ main =
   Signal.map2 view query.signal results.signal
 
 
-results : Signal.Mailbox String
+results : Signal.Mailbox Data
 results =
-  Signal.mailbox ""
+  Signal.mailbox initialData
 
 
 port requestImg : Signal (Task Http.Error ())
@@ -66,30 +60,40 @@ query =
   Signal.mailbox ""
 
 
-getImage : String -> Task Http.Error String
+getImage : String -> Task Http.Error Data
 getImage username =
-        Http.get avatar ("https://api.github.com/users/" ++ username)
+        Http.get data ("https://api.github.com/users/" ++ username)
         `andThen`
-            showPhoto
+            showData
 
 
 -- JSON DECODERS
 
 
-type alias Avatar =
-    { source : String
+type alias Data =
+    { source : String,
+      repos : Int,
+      name : String
     }
 
 
-avatar : Json.Decoder Avatar
-avatar =
-     Json.object1 Avatar
+data : Json.Decoder Data
+data =
+     Json.object3 Data
      ("avatar_url" := Json.string)
+     ("public_repos" := Json.int)
+     ("name" := Json.string)
 
 
+initialData : Data
+initialData =
+  { source = "",
+    repos = 0,
+    name = ""
+  }
 -- HANDLE RESPONSES
 
 
-showPhoto : Avatar -> Task Http.Error String
-showPhoto photo =
-  succeed photo.source
+showData : Data -> Task Http.Error Data
+showData data =
+  succeed data
