@@ -9,43 +9,26 @@ import String
 import Task exposing (..)
 import Keyboard
 
+--MODEL
+
+type alias Model =
+    { avatar  : String,
+      repos : Int,
+      name : String,
+      createdAt : String
+    }
 
 
--- VIEW
-
-view : String -> Data -> Html
-view string data =
-  div [ ]
-    [ input
-        [ placeholder "GitHub username"
-        , Attr.value string
-        , on "input" targetValue (Signal.message query.address)
-        , class "input"
-        ]
-        [ ]
-    , img [src data.avatar
-          , class "avatar"]
-        [ ]
-    , p [ ]
-        [ text ("Name: " ++ data.name) ]
-    , p [ ]
-        [ text ("Public repos: " ++ (toString data.repos))]
-    , p [ ]
-        [ text ("Created at: " ++ data.createdAt) ]
-    ]
+initialModel : Model
+initialModel =
+  { avatar  = "",
+    repos = 0,
+    name = "",
+    createdAt = ""
+  }
 
 
--- WIRING
-
-main : Signal Html
-main =
-  Signal.map2 view query.signal results.signal
-
-
-results : Signal.Mailbox Data
-results =
-  Signal.mailbox initialData
-
+--UPDATE
 
 port requestData : Signal (Task Http.Error ())
 port requestData =
@@ -55,52 +38,66 @@ port requestData =
                    `andThen` Signal.send results.address)
 
 
-sample get input =
-  Signal.sampleOn Keyboard.enter (Signal.map get input)
+sample: (String -> Task Http.Error Model)
+      -> Signal String
+      -> Signal (Task Http.Error Model)
+sample getImage input =
+  Signal.sampleOn Keyboard.enter (Signal.map getImage input)
 
 
-query : Signal.Mailbox String
-query =
-  Signal.mailbox ""
-
-
-getImage : String -> Task Http.Error Data
+getImage : String -> Task Http.Error Model
 getImage username =
-        Http.get data ("https://api.github.com/users/" ++ username)
-        `andThen`
-            showData
+  Http.get data ("https://api.github.com/users/" ++ username)
 
 
--- JSON DECODERS
-
-
-type alias Data =
-    { avatar  : String,
-      repos : Int,
-      name : String,
-      createdAt : String
-    }
-
-
-data : Json.Decoder Data
+data : Json.Decoder Model
 data =
-     Json.object4 Data
+     Json.object4 Model
      ("avatar_url" := Json.string)
      ("public_repos" := Json.int)
      ("name" := Json.string)
      ("created_at" := Json.string)
 
 
-initialData : Data
-initialData =
-  { avatar  = "",
-    repos = 0,
-    name = "",
-    createdAt = ""
-  }
--- HANDLE RESPONSES
+-- VIEW
+
+view : String -> Model -> Html
+view username model =
+  div [ ]
+    [ input
+        [ placeholder "GitHub username"
+        , Attr.value username
+
+        , on "input" targetValue (Signal.message query.address)
+        , class "input"
+        ]
+        [ ]
+    , img [src model.avatar
+          , class "avatar"]
+        [ ]
+    , p [ ]
+        [ text ("Name: " ++ model.name) ]
+    , p [ ]
+        [ text ("Public repos: " ++ (toString model.repos))]
+    , p [ ]
+        [ text ("Created at: " ++ model.createdAt) ]
+    ]
 
 
-showData : Data -> Task Http.Error Data
-showData data =
-  succeed data
+--MAILBOXES
+
+query : Signal.Mailbox String
+query =
+  Signal.mailbox ""
+
+results : Signal.Mailbox Model
+results =
+  Signal.mailbox initialModel
+
+
+-- WIRING
+
+main : Signal Html
+main =
+  Signal.map2 view query.signal results.signal
+
